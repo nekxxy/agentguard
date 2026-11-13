@@ -1,0 +1,5 @@
+contract/node_modules/
+contract/build/
+*.log
+.env*
+!\.env.example
