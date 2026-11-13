@@ -1,0 +1,11 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {Engine} from '../src/engine.js';
+const owner='owner.testnet',a='agent.testnet',vault='vault.testnet';
+const p={cap:'1',budget:'1000',recipient:'shop.testnet',method:'buy',args:'{}'};
+function setup(){const e=new Engine(owner);e.configure(owner,a,p);return e}
+test('100 daily requests then reject, next day resumes',()=>{const e=setup();for(let n=1;n<=100;n++){e.reserve(a,String(n),'1',1);e.settle(vault,vault,a,String(n),true)}assert.throws(()=>e.reserve(a,'101','1',1));e.reserve(a,'101','1',2);assert.equal(e.agents[a].count,1);assert.equal(e.agents[a].used,'1')});
+test('clock cannot reverse after settled request',()=>{const e=setup();e.reserve(a,'1','1',2);e.settle(vault,vault,a,'1',true);assert.throws(()=>e.reserve(a,'2','1',1));assert.equal(e.agents[a].nonce,'1')});
+test('policy reconfiguration cannot erase spend or nonce',()=>{const e=setup();e.reserve(a,'1','1',1);e.settle(vault,vault,a,'1',true);e.configure(owner,a,{...p,budget:'1'});assert.equal(e.agents[a].used,'1');assert.equal(e.agents[a].nonce,'1');assert.throws(()=>e.reserve(a,'2','1',1))});
+test('agents have separate reservations',()=>{const e=setup();e.configure(owner,'second.testnet',p);e.reserve(a,'1','1',1);e.reserve('second.testnet','1','1',1);e.settle(vault,vault,a,'1',false);assert.ok(e.agents['second.testnet'].pending);assert.equal(e.agents[a].pending,null)});
+test('repeated or wrong callback leaves actual reservation locked',()=>{const e=setup();e.reserve(a,'1','1',1);assert.throws(()=>e.settle(vault,vault,a,'2',true));assert.ok(e.agents[a].pending);e.settle(vault,vault,a,'1',false);assert.throws(()=>e.settle(vault,vault,a,'1',true));assert.equal(e.agents[a].used,'1')});
+test('bounded args rejects malformed and oversized payloads',()=>{const e=setup();assert.throws(()=>e.configure(owner,a,{...p,args:'{'}));assert.throws(()=>e.configure(owner,a,{...p,args:' '.repeat(1025)}));assert.equal(e.agents[a].budget,'1000')});
+test('failure retained across serialized day boundary',()=>{let e=setup();e.reserve(a,'1','1',1);e=Object.assign(new Engine(owner),JSON.parse(JSON.stringify(e)));assert.throws(()=>e.reserve(a,'2','1',2));e.settle(vault,vault,a,'1',false);e.reserve(a,'2','1',2);assert.equal(e.agents[a].used,'1');assert.equal(e.agents[a].nonce,'2')});
