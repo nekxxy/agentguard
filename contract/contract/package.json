@@ -1,0 +1,21 @@
+{
+  "name": "contract",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test tests/engine.test.mjs",
+    "build": "near-sdk-js build src/contract.ts build/agentguard.wasm"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "near-sdk-js": "2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "18.19.70",
+    "near-workspaces": "5.0.0"
+  },
+  "type": "module"
+}
